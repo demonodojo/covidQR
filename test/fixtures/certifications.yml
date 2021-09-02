@@ -1,0 +1,24 @@
+# == Schema Information
+#
+# Table name: certifications
+#
+#  id         :bigint           not null, primary key
+#  category   :string
+#  name       :string
+#  qr_code    :binary
+#  surname    :string
+#  created_at :datetime         not null
+#  updated_at :datetime         not null
+#
+
+one:
+  name: MyString
+  surname: MyString
+  category: MyString
+  qr_code: 
+
+two:
+  name: MyString
+  surname: MyString
+  category: MyString
+  qr_code: 
