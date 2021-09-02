@@ -11,13 +11,18 @@
 </p>
 
 <p>
+  <strong>Date of Birth:</strong>
+  <%= @certification.date_of_birth %>
+</p>
+<p>
   <strong>Category:</strong>
   <%= @certification.category %>
 </p>
 
+
 <p>
   <strong>Qr code:</strong>
-  <%= @certification.qr_code %>
+  <%== @certification.qr_code %>
 </p>
 
 <%= link_to 'Edit', edit_certification_path(@certification) %> |
