@@ -25,19 +25,48 @@
 require 'base45'
 
 class Certification < ApplicationRecord
+
+  CODES = {
+    disease_target: "disease-agent-targeted",
+    vaccine_or_prophylaxis: "sct-vaccines-covid-19",
+    medicinal_product: "vaccines-covid-19-names",
+    vaccination_country: "country-2-codes",
+    marketing_authorization_holder: "vaccines-covid-19-auth-holders"
+  }.with_indifferent_access
+
+  URI_SCHEMA = 'HC1'
+
+  CWT_ISSUER = 1
+  CWT_SUBJECT = 2
+  CWT_AUDIENCE = 3
+  CWT_EXPIRATION = 4
+  CWT_NOT_BEFORE = 5
+  CWT_ISSUED_AT = 6
+  CWT_ID = 7
+  CWT_HCERT = -260
+  CWT_HCERT_V1 = 1
+
+  COSE_ALG_TAG = 1
+  COSE_KID_TAG = 4
+
   before_save :create_qr_code
 
-  private
   def create_qr_code
-    json = self.json_info
-
-    self.build_qr_code(json)
+    base = self.json_info
+    cwt = self.make_cwt(base, 4, self.issuer)
+    cbor = sign(cwt)
+    self.build_qr_code(cbor)
   end
 
   def build_qr_code(payload)
     data_compressed = Zlib::Deflate.deflate(payload)
     base45 = Base45.encode data_compressed
-    self.qr_code = RQRCode::QRCode.new(base45).as_svg(
+    total = "#{URI_SCHEMA}:#{base45}"
+    self.qr_code = total
+  end
+
+  def show_qr_code
+    RQRCode::QRCode.new(self.qr_code).as_svg(
       color: "000",
       shape_rendering: "crispEdges",
       module_size: 11,
@@ -57,14 +86,80 @@ class Certification < ApplicationRecord
       },
       dob: self.date_of_birth.to_s,
       v: [{
-            tg: "840539006", # COVID-19 https://github.com/ehn-dcc-development/ehn-dcc-schema/blob/release/1.3.0/valuesets/disease-agent-targeted.json
-            vp: "1119349007", # SARS-CoV-2 mRNA vaccine https://github.com/ehn-dcc-development/ehn-dcc-schema/blob/release/1.3.0/valuesets/vaccine-prophylaxis.json
-            mp: "EU/1/20/1528", # Comirnaty (Pfizer) https://github.com/ehn-dcc-development/ehn-dcc-schema/blob/release/1.3.0/valuesets/vaccine-medicinal-product.json
-            ma: "ORG-100030215", # Biontech https://github.com/ehn-dcc-development/ehn-dcc-schema/blob/release/1.3.0/valuesets/vaccine-mah-manf.json
-            dn: 1, # Dose number
-            sd: 2, # Total series of doses
-            dt: self.vaccination_date
+            tg: self.disease_target,
+            vp: self.vaccine_or_prophylaxis,
+            mp: self.medicinal_product,
+            ma: self.marketing_authorization_holder,
+            dn: self.dose_number, # Dose number
+            sd: self.series_of_doses, # Total series of doses
+            dt: self.vaccination_date.to_s,
+            co: self.vaccination_country,
+            is: self.issuer,
+            ci: self.uvci
           }]
-    }.to_json
+    }
+  end
+
+  def make_cwt(payload, expiration_months=nil, issuer=nil)
+    cwt = {
+      CWT_ISSUED_AT => Time.now.to_i,
+      CWT_HCERT => {
+        CWT_HCERT_V1 => payload
+      }
+    }
+    if expiration_months
+      cwt[CWT_EXPIRATION] = (Time.now + expiration_months.months).to_i
+    end
+    cwt[CWT_ISSUER] = issuer if issuer
+    cwt
+  end
+
+  def sign(payload)
+    sig_structure = [
+      'Signature1',
+      { 1 => -37,
+        4 => kid }.to_cbor,
+      "".b,
+      payload.to_cbor
+    ]
+    message = sig_structure.to_cbor
+    private_key = OpenSSL::PKey::RSA.new(Issuer.first.private_key)
+
+    signature = private_key.sign_pss("SHA256", message, salt_length: 32, mgf1_hash: "SHA256")
+
+    public_key = OpenSSL::PKey::RSA.new(Issuer.first.public_key)
+
+    valid = public_key.verify_pss("SHA256", signature, message, salt_length: :auto, mgf1_hash: "SHA256")
+    puts "The result is #{valid ? 'valid' : 'invalid'}"
+
+    self.create_security_message({ 1 => -37, 4 => kid }, "".b, payload.to_cbor, signature.b, cbor_tag: 18)
+  end
+
+  def create_security_message(protected_headers, unprotected_headers, *args, cbor_tag: 0)
+    CBOR::Tagged.new(cbor_tag, [CBOR.encode(protected_headers), unprotected_headers, *args]).to_cbor
+  end
+
+  def verify
+    str_code = self.qr_code.to_s
+    base45_code = str_code[4..]
+    zipped = Base45.decode base45_code
+    cose = Zlib::Inflate.inflate(zipped)
+    sign = COSE::Sign1.deserialize(cose)
+
+    public_key = OpenSSL::PKey::RSA.new(Issuer.first.public_key)
+    cose_key =  COSE::Key.from_pkey(public_key)
+    cose_key.kid = kid
+
+    sign.verify(cose_key)
+
+    sign.payload
+  end
+
+  def kid
+    Digest::SHA256.hexdigest(raw_public_key)[0..8]
+  end
+
+  def raw_public_key
+    Issuer.first.public_key.split("\n")[1]
   end
 end

@@ -1,0 +1,21 @@
+# == Schema Information
+#
+# Table name: issuers
+#
+#  id          :bigint           not null, primary key
+#  name        :string
+#  private_key :text
+#  public_key  :text
+#  created_at  :datetime         not null
+#  updated_at  :datetime         not null
+#
+
+one:
+  name: 
+  private_key: MyText
+  public_key: MyText
+
+two:
+  name: 
+  private_key: MyText
+  public_key: MyText

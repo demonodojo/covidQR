@@ -31,6 +31,8 @@ gem 'bootsnap', '>= 1.4.4', require: false
 
 gem 'cose'
 
+gem 'cwt'
+
 gem 'rqrcode', "~> 2.0"
 
 gem 'zlib'

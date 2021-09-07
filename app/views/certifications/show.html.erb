@@ -21,8 +21,13 @@
 
 
 <p>
-  <strong>Qr code:</strong>
+  <strong>Qr code info:</strong>
   <%== @certification.qr_code %>
+</p>
+
+<p>
+  <strong>Qr code:</strong>
+  <%== @certification.show_qr_code %>
 </p>
 
 <%= link_to 'Edit', edit_certification_path(@certification) %> |

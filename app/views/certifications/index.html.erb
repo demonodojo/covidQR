@@ -19,7 +19,7 @@
         <td><%= certification.name %></td>
         <td><%= certification.surname %></td>
         <td><%= certification.category %></td>
-        <td><%= certification.qr_code %></td>
+        <td><div width="50"><%== certification.qr_code %></div></td>
         <td><%= link_to 'Show', certification %></td>
         <td><%= link_to 'Edit', edit_certification_path(certification) %></td>
         <td><%= link_to 'Destroy', certification, method: :delete, data: { confirm: 'Are you sure?' } %></td>

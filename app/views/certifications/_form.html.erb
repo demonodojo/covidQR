@@ -31,6 +31,58 @@
     <%= form.text_field :category %>
   </div>
 
+  <div class="field">
+    <%= form.label :disease_target %>
+    <%= value_set_select :certification, :disease_target %>
+  </div>
+
+  <div class="field">
+    <%= form.label :vaccine_or_prophylaxis %>
+    <%= value_set_select :certification, :vaccine_or_prophylaxis %>
+  </div>
+
+  <div class="field">
+    <%= form.label :medicinal_product %>
+    <%= value_set_select :certification, :medicinal_product %>
+  </div>
+
+  <div class="field">
+    <%= form.label :marketing_authorization_holder %>
+    <%= value_set_select :certification, :marketing_authorization_holder %>
+  </div>
+
+  <div class="field">
+    <%= form.label :vaccination_country %>
+    <%= value_set_select :certification, :vaccination_country %>
+  </div>
+
+  <div class="field">
+    <%= form.label :vaccination_date %>
+    <%= form.date_field :vaccination_date %>
+  </div>
+
+  <div class="field">
+    <%= form.label :dose_number %>
+    <%= form.number_field :dose_number, min: 1 %>
+  </div>
+
+  <div class="field">
+    <%= form.label :series_of_doses %>
+    <%= form.number_field :series_of_doses, min: 1 %>
+  </div>
+
+  <div class="field">
+    <%= form.label :uvci %>
+    <%= form.text_field :uvci %>
+  </div>
+
+  <div class="field">
+    <%= form.label :issuer %>
+    <%= form.text_field :issuer %>
+  </div>
+
+
+
   <div class="actions">
     <%= form.submit %>
   </div>
