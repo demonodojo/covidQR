@@ -7,7 +7,6 @@
 #  date_of_birth                  :date
 #  disease_target                 :string
 #  dose_number                    :integer
-#  issuer                         :string
 #  marketing_authorization_holder :string
 #  medicinal_product              :string
 #  name                           :string
@@ -20,6 +19,11 @@
 #  vaccine_or_prophylaxis         :string
 #  created_at                     :datetime         not null
 #  updated_at                     :datetime         not null
+#  issuer_id                      :bigint
+#
+# Indexes
+#
+#  index_certifications_on_issuer_id  (issuer_id)
 #
 require "test_helper"
 

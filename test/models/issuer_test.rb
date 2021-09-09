@@ -6,6 +6,7 @@
 #  name        :string
 #  private_key :text
 #  public_key  :text
+#  type        :string
 #  created_at  :datetime         not null
 #  updated_at  :datetime         not null
 #

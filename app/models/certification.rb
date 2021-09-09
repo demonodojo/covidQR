@@ -7,7 +7,6 @@
 #  date_of_birth                  :date
 #  disease_target                 :string
 #  dose_number                    :integer
-#  issuer                         :string
 #  marketing_authorization_holder :string
 #  medicinal_product              :string
 #  name                           :string
@@ -20,11 +19,18 @@
 #  vaccine_or_prophylaxis         :string
 #  created_at                     :datetime         not null
 #  updated_at                     :datetime         not null
+#  issuer_id                      :bigint
+#
+# Indexes
+#
+#  index_certifications_on_issuer_id  (issuer_id)
 #
 
 require 'base45'
 
 class Certification < ApplicationRecord
+
+  belongs_to :issuer
 
   CODES = {
     disease_target: "disease-agent-targeted",
@@ -94,7 +100,7 @@ class Certification < ApplicationRecord
             sd: self.series_of_doses, # Total series of doses
             dt: self.vaccination_date.to_s,
             co: self.vaccination_country,
-            is: self.issuer,
+            is: self.issuer.name,
             ci: self.uvci
           }]
     }
@@ -102,6 +108,7 @@ class Certification < ApplicationRecord
 
   def make_cwt(payload, expiration_months=nil, issuer=nil)
     cwt = {
+      CWT_ISSUER => issuer.name,
       CWT_ISSUED_AT => Time.now.to_i,
       CWT_HCERT => {
         CWT_HCERT_V1 => payload
@@ -110,29 +117,21 @@ class Certification < ApplicationRecord
     if expiration_months
       cwt[CWT_EXPIRATION] = (Time.now + expiration_months.months).to_i
     end
-    cwt[CWT_ISSUER] = issuer if issuer
     cwt
   end
 
   def sign(payload)
     sig_structure = [
       'Signature1',
-      { 1 => -37,
-        4 => kid }.to_cbor,
+      { 1 => issuer.cose_code,
+        4 => issuer.kid }.to_cbor,
       "".b,
       payload.to_cbor
     ]
     message = sig_structure.to_cbor
-    private_key = OpenSSL::PKey::RSA.new(Issuer.first.private_key)
+    signature = issuer.sign(message)
 
-    signature = private_key.sign_pss("SHA256", message, salt_length: 32, mgf1_hash: "SHA256")
-
-    public_key = OpenSSL::PKey::RSA.new(Issuer.first.public_key)
-
-    valid = public_key.verify_pss("SHA256", signature, message, salt_length: :auto, mgf1_hash: "SHA256")
-    puts "The result is #{valid ? 'valid' : 'invalid'}"
-
-    self.create_security_message({ 1 => -37, 4 => kid }, "".b, payload.to_cbor, signature.b, cbor_tag: 18)
+    self.create_security_message({ 1 => issuer.cose_code, 4 => issuer.kid }, "".b, payload.to_cbor, signature.b, cbor_tag: 18)
   end
 
   def create_security_message(protected_headers, unprotected_headers, *args, cbor_tag: 0)
@@ -146,20 +145,10 @@ class Certification < ApplicationRecord
     cose = Zlib::Inflate.inflate(zipped)
     sign = COSE::Sign1.deserialize(cose)
 
-    public_key = OpenSSL::PKey::RSA.new(Issuer.first.public_key)
-    cose_key =  COSE::Key.from_pkey(public_key)
-    cose_key.kid = kid
-
-    sign.verify(cose_key)
+    valid = sign.verify(issuer.cose_public_key)
+    raise 'Not verified' unless valid
 
     sign.payload
   end
 
-  def kid
-    Digest::SHA256.hexdigest(raw_public_key)[0..8]
-  end
-
-  def raw_public_key
-    Issuer.first.public_key.split("\n")[1]
-  end
 end

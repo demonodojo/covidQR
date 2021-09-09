@@ -65,6 +65,6 @@ class CertificationsController < ApplicationController
     # Only allow a list of trusted parameters through.
     def certification_params
       params.require(:certification).permit(:name, :surname, :date_of_birth, :category, :qr_code, :disease_target, :vaccine_or_prophylaxis, :medicinal_product, :marketing_authorization_holder,
-                                            :vaccination_country, :vaccination_date, :dose_number, :series_of_doses, :issuer, :uvci)
+                                            :vaccination_country, :vaccination_date, :dose_number, :series_of_doses, :issuer_id, :uvci)
     end
 end

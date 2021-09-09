@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2021_09_06_123000) do
+ActiveRecord::Schema.define(version: 2021_09_08_110739) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -31,8 +31,9 @@ ActiveRecord::Schema.define(version: 2021_09_06_123000) do
     t.integer "series_of_doses"
     t.date "vaccination_date"
     t.string "vaccination_country"
-    t.string "issuer"
     t.string "uvci"
+    t.bigint "issuer_id"
+    t.index ["issuer_id"], name: "index_certifications_on_issuer_id"
   end
 
   create_table "issuers", force: :cascade do |t|
@@ -41,6 +42,7 @@ ActiveRecord::Schema.define(version: 2021_09_06_123000) do
     t.text "public_key"
     t.datetime "created_at", precision: 6, null: false
     t.datetime "updated_at", precision: 6, null: false
+    t.string "type"
   end
 
   create_table "value_sets", force: :cascade do |t|
